@@ -599,7 +599,7 @@
     <div id="root"></div>
 
  
-    <script src="data.js"></script>
+    <script src="./data.js"></script>
 
     <script type="text/babel" data-type="module">
       import React, { useEffect, useRef, useState, useMemo } from "react";
@@ -1352,7 +1352,7 @@
 
             let engine;
             try {
-              const response = await fetch("inflation_chart.wasm");
+              const response = await fetch("./inflation_chart.wasm");
               if (!response.ok) throw new Error("Wasm not found");
               const { instance } = await WebAssembly.instantiateStreaming(
                 response
