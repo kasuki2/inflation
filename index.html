@@ -1,0 +1,1951 @@
+<!DOCTYPE html>
+<html lang="hu">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Magyar infláció – WebGL Animáció</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/noUiSlider/15.7.1/nouislider.min.css"
+    />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/noUiSlider/15.7.1/nouislider.min.js"></script>
+
+    <script type="importmap">
+      {
+        "imports": {
+          "react": "https://esm.sh/react@18.2.0",
+          "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
+          "react/jsx-runtime": "https://esm.sh/react@18.2.0/jsx-runtime"
+        }
+      }
+    </script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <style>
+      body {
+        font-family: "Inter", sans-serif;
+        background-color: #f8fafc;
+        margin: 0;
+      }
+      :root {
+        --surface: #ffffff;
+        --border: #e2e8f0;
+        --muted: #64748b;
+        --bg: #f8fafc;
+        --text: #1e293b;
+        --accent: #3b82f6;
+        --accent-dark: #2563eb;
+      }
+
+      .bottom-control-bar {
+        background-color: var(--surface);
+        border-top: 1px solid var(--border);
+        padding: 16px 32px 24px 32px;
+        width: 100%;
+        margin-top: auto;
+        z-index: 10;
+        box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.02);
+      }
+
+      .controls-inner-layout {
+        max-width: 100%;
+        margin: 0;
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+        gap: 32px;
+      }
+
+      .slider-wrapper {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        flex-wrap: nowrap;
+        min-width: 0;
+      }
+
+      .slider-core {
+        flex: 1;
+        padding: 0 10px;
+        min-width: 50px;
+      }
+
+      .step-button {
+        height: 36px;
+        width: 36px;
+        border-radius: 50%;
+        background-color: #ffffff;
+        border: 1px solid var(--border);
+        color: var(--muted);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        flex-shrink: 0;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+      }
+
+      .step-button:hover {
+        background-color: var(--bg);
+        color: var(--text);
+        border-color: var(--muted);
+      }
+
+      .step-button:active {
+        transform: scale(0.92);
+      }
+
+      .media-deck {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        flex-shrink: 0;
+      }
+
+      .play-button {
+        height: 48px;
+        width: 48px;
+        border-radius: 50%;
+        background-color: var(--accent);
+        border: none;
+        color: #ffffff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        box-shadow: 0 4px 10px rgba(59, 130, 246, 0.25);
+        transition: all 0.2s ease-in-out;
+      }
+
+      .play-button:hover {
+        background-color: var(--accent-dark);
+        transform: scale(1.04);
+        box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35);
+      }
+
+      .play-button:active {
+        transform: scale(0.96);
+      }
+
+      .icon-play {
+        width: 24px;
+        height: 24px;
+      }
+
+      .noUi-target {
+        background: var(--border);
+        border-radius: 9999px;
+        border: none;
+        box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.05);
+        height: 10px;
+      }
+
+      .noUi-connect {
+        background: var(--accent);
+      }
+
+      .noUi-horizontal .noUi-handle {
+        width: 24px;
+        height: 24px;
+        right: -12px;
+        top: -7px;
+        border-radius: 50%;
+        background: #ffffff;
+        border: 3px solid var(--accent);
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        cursor: grab;
+        transition: transform 0.1s, border-color 0.2s;
+      }
+
+      .noUi-horizontal .noUi-handle:active {
+        cursor: grabbing;
+        transform: scale(1.15);
+        border-color: var(--accent-dark);
+      }
+
+      .noUi-handle::before,
+      .noUi-handle::after {
+        display: none;
+      }
+
+      .noUi-pips-horizontal {
+        padding: 10px 0;
+        height: auto;
+      }
+
+      .noUi-value-horizontal {
+        transform: translate(-50%, 50%);
+        font-size: 12px;
+        font-weight: 700;
+        color: var(--muted);
+        cursor: pointer;
+        transition: color 0.2s ease;
+      }
+
+      .noUi-value-horizontal:hover {
+        color: var(--accent);
+      }
+
+      .noUi-marker-horizontal.noUi-marker-large {
+        height: 8px;
+        background: var(--muted);
+        width: 2px;
+      }
+
+      .noUi-marker-horizontal.noUi-marker {
+        background: var(--border);
+        height: 5px;
+      }
+
+      .category-accordion {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+      }
+
+      .category-details {
+        border: 1px solid #f1f5f9;
+        border-radius: 0.5rem;
+        background: #f8fafc;
+        overflow: hidden;
+      }
+
+      .category-details[open] {
+        background: #ffffff;
+        border-color: #e2e8f0;
+      }
+
+      .category-details.nested {
+        margin-top: 0.25rem;
+        background: #f8fafc;
+      }
+
+      .category-summary {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.75rem;
+        cursor: pointer;
+        list-style: none;
+        user-select: none;
+      }
+
+      .category-summary::-webkit-details-marker {
+        display: none;
+      }
+
+      .category-summary::before {
+        content: "▸";
+        flex-shrink: 0;
+        width: 1rem;
+        color: #94a3b8;
+        font-size: 0.75rem;
+        transition: transform 0.15s ease;
+      }
+
+      .category-details[open] > .category-summary::before {
+        transform: rotate(90deg);
+      }
+
+      .category-dot {
+        width: 0.625rem;
+        height: 0.625rem;
+        border-radius: 9999px;
+        flex-shrink: 0;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+      }
+
+      .category-name {
+        font-size: 0.875rem;
+        font-weight: 500;
+        color: #334155;
+        line-height: 1.3;
+      }
+
+      .category-inflation {
+        display: inline-block;
+        min-width: 4.25rem;
+        text-align: right;
+        font-size: 0.875rem;
+        font-weight: 700;
+        color: #0f172a;
+        flex-shrink: 0;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .category-row-meta {
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+        flex-shrink: 0;
+        margin-left: auto;
+      }
+
+      .sidebar-panel {
+        width: 26rem;
+      }
+
+      .app-shell {
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .app-main {
+        display: flex;
+        flex: 1 1 auto;
+        min-height: 0;
+      }
+
+      .chart-section {
+        position: relative;
+        flex: 1 1 auto;
+        min-height: 0;
+        min-width: 0;
+        background: #ffffff;
+        overflow: hidden;
+        cursor: pointer;
+      }
+
+      .sidebar-date {
+        font-size: 1.875rem;
+        line-height: 1.2;
+        font-weight: 900;
+        margin-bottom: 1rem;
+        color: #0f172a;
+      }
+
+      @media (min-width: 1024px) {
+        body {
+          overflow: hidden;
+        }
+
+        .app-shell {
+          height: 100vh;
+        }
+
+        .app-main {
+          flex-direction: row;
+          overflow: hidden;
+        }
+
+        .chart-section {
+          order: 2;
+        }
+
+        .sidebar-panel {
+          order: 1;
+          overflow-y: auto;
+        }
+      }
+
+      @media (max-width: 1023px) {
+        body {
+          overflow-y: auto;
+        }
+
+        .app-header {
+          padding: 1rem 1.25rem;
+        }
+
+        .app-header h1 {
+          font-size: 1.25rem;
+          line-height: 1.3;
+        }
+
+        .app-header p {
+          font-size: 0.8125rem;
+        }
+
+        .app-main {
+          flex-direction: column;
+          overflow: visible;
+          flex: none;
+        }
+
+        .chart-section {
+          order: 1;
+          width: 100%;
+          flex: 0 0 auto;
+          height: min(52vh, 28rem);
+          min-height: 16rem;
+        }
+
+        .sidebar-panel {
+          order: 2;
+          width: 100%;
+          max-width: none;
+          flex-shrink: 0;
+          border-right: none;
+          border-top: 1px solid var(--border);
+          box-shadow: none;
+          overflow-y: visible;
+          padding: 1rem 1rem 1.5rem;
+        }
+
+        .sidebar-date {
+          font-size: 1.5rem;
+          margin-bottom: 0.75rem;
+        }
+
+        .bottom-control-bar {
+          padding: 12px 16px 20px;
+          position: sticky;
+          bottom: 0;
+        }
+
+        .controls-inner-layout {
+          gap: 12px;
+        }
+
+        .slider-core {
+          padding: 0 4px;
+        }
+      }
+
+      .subcategory-list {
+        padding: 0 0.5rem 0.5rem 1.25rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+      }
+
+      .category-leaf {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.5rem 0.625rem;
+        border-radius: 0.375rem;
+        cursor: pointer;
+      }
+
+      .category-leaf .category-name {
+        font-size: 0.8125rem;
+        font-weight: 400;
+      }
+
+      .category-leaf.is-active,
+      .category-summary.is-active {
+        background: #eff6ff;
+      }
+
+      .category-details.is-filtered {
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 1px #3b82f6;
+      }
+
+      .category-filter-btn {
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 1.5rem;
+        height: 1.5rem;
+        border-radius: 0.375rem;
+        border: 1px solid transparent;
+        background: transparent;
+        color: #94a3b8;
+        cursor: pointer;
+        transition: all 0.15s ease;
+      }
+
+      .category-filter-btn:hover {
+        background: #e2e8f0;
+        color: #475569;
+      }
+
+      .category-filter-btn.is-active {
+        background: #dbeafe;
+        border-color: #3b82f6;
+        color: #2563eb;
+      }
+
+      .filter-banner {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.5rem;
+        margin-bottom: 0.75rem;
+        padding: 0.5rem 0.75rem;
+        border-radius: 0.5rem;
+        background: #eff6ff;
+        border: 1px solid #bfdbfe;
+        font-size: 0.75rem;
+        color: #1e40af;
+      }
+
+      .filter-banner button {
+        flex-shrink: 0;
+        padding: 0.25rem 0.5rem;
+        border-radius: 0.375rem;
+        background: #ffffff;
+        border: 1px solid #bfdbfe;
+        color: #1d4ed8;
+        font-size: 0.75rem;
+        cursor: pointer;
+      }
+
+      .filter-banner button:hover {
+        background: #dbeafe;
+      }
+
+      /* Layer both canvases in the same grid cell so WebGL stays on top */
+      .chart-stack {
+        display: grid;
+        grid-template: 1fr / 1fr;
+        min-height: 0;
+      }
+      .chart-stack canvas {
+        grid-area: 1 / 1;
+        width: 100%;
+        height: 100%;
+        display: block;
+      }
+      .chart-stack .grid-layer {
+        z-index: 0;
+        pointer-events: none;
+      }
+      .chart-stack .webgl-layer {
+        z-index: 1;
+      }
+
+      .chart-tooltip {
+        position: absolute;
+        pointer-events: none;
+        display: none;
+        transform: translate(-50%, calc(-100% - 10px));
+      }
+
+      .chart-tooltip-selected {
+        z-index: 20;
+      }
+
+      .chart-tooltip-hover {
+        z-index: 21;
+      }
+
+      .chart-tooltip-inner {
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border: 1px solid #e2e8f0;
+        border-radius: 0.75rem;
+        padding: 0.75rem;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+        min-width: 11rem;
+      }
+
+      .chart-tooltip-title {
+        font-weight: 700;
+        margin-bottom: 0.35rem;
+        line-height: 1.25;
+      }
+
+      .chart-tooltip-rows {
+        display: grid;
+        gap: 0.2rem;
+      }
+
+      .chart-tooltip-row {
+        display: flex;
+        justify-content: space-between;
+        gap: 1rem;
+        font-size: 0.75rem;
+        color: #334155;
+      }
+
+      .chart-tooltip-row b {
+        font-weight: 700;
+        color: #0f172a;
+        font-variant-numeric: tabular-nums;
+        text-align: right;
+      }
+
+      .chart-tooltip-muted {
+        color: #94a3b8;
+      }
+
+      .chart-tooltip-path {
+        font-size: 0.7rem;
+        color: #64748b;
+        margin-top: 0.5rem;
+        padding-top: 0.5rem;
+        border-top: 1px solid #e2e8f0;
+        line-height: 1.35;
+      }
+
+      .chart-tooltip-arrow {
+        position: absolute;
+        left: 50%;
+        bottom: -6px;
+        transform: translateX(-50%);
+        width: 0;
+        height: 0;
+        border-left: 7px solid transparent;
+        border-right: 7px solid transparent;
+        border-top: 7px solid rgba(255, 255, 255, 0.95);
+        filter: drop-shadow(0 1px 0 #e2e8f0);
+      }
+    </style>
+  </head>
+  <body class="text-slate-800">
+    <div id="root"></div>
+
+ 
+    <script src="data.js"></script>
+
+    <script type="text/babel" data-type="module">
+      import React, { useEffect, useRef, useState, useMemo } from "react";
+      import { createRoot } from "react-dom/client";
+
+      // 1. WEBGL SHADERS
+      const vsSource = `
+        attribute vec2 a_position; // x = log10(weight), y = inflation
+        attribute vec3 a_color;
+        attribute float a_visible;
+        attribute float a_id;
+
+        uniform vec2 u_min_max_x;
+        uniform vec2 u_min_max_y;
+        uniform float u_selected_id;
+        uniform float u_dpr;
+
+        varying vec3 v_color;
+        varying float v_visible;
+        varying float v_is_selected;
+
+        void main() {
+          // Normalize to [-1, 1] clip space
+          float nx = 2.0 * (a_position.x - u_min_max_x.x) / (u_min_max_x.y - u_min_max_x.x) - 1.0;
+          float ny = 2.0 * (a_position.y - u_min_max_y.x) / (u_min_max_y.y - u_min_max_y.x) - 1.0;
+          
+          gl_Position = vec4(nx, ny, 0.0, 1.0);
+          
+          float is_selected = step(0.1, 1.0 - abs(a_id - u_selected_id));
+          gl_PointSize = (is_selected > 0.5 ? 16.0 : 12.0) * u_dpr;
+          
+          v_color = a_color;
+          v_visible = a_visible;
+          v_is_selected = is_selected;
+        }
+      `;
+
+      const fsSource = `
+        precision mediump float;
+        varying vec3 v_color;
+        varying float v_visible;
+        varying float v_is_selected;
+
+        void main() {
+          vec2 pt = gl_PointCoord - vec2(0.5);
+          float dist = length(pt);
+          if (dist > 0.5) discard;
+
+          float alpha = v_visible;
+          vec3 finalColor = v_color;
+
+          if (v_is_selected > 0.5) {
+            float fillRadius = 0.34;
+            float ringOuter = 0.48;
+
+            if (dist <= fillRadius) {
+              float fillAlpha = (fillRadius - dist) * 18.0;
+              fillAlpha = clamp(fillAlpha, 0.0, 1.0);
+              alpha *= mix(0.88, 1.0, fillAlpha);
+              finalColor = v_color;
+            } else if (dist <= ringOuter) {
+              finalColor = vec3(0.12, 0.16, 0.22);
+              alpha *= 0.95;
+            } else {
+              discard;
+            }
+          } else {
+            float softAlpha = (0.5 - dist) * 20.0;
+            softAlpha = clamp(softAlpha, 0.0, 1.0);
+            alpha *= softAlpha;
+          }
+
+          gl_FragColor = vec4(finalColor, alpha);
+        }
+      `;
+
+      // 2. CONFIG & COLORS
+      const CUSTOM_CATEGORIES = {
+        cat_1: { name: "Élelmiszerek", order: 1, color: [1.0, 0.0, 0.0] },
+        cat_2: {
+          name: "Szeszes italok, dohányáruk",
+          order: 2,
+          color: [0.7, 0.0, 1.0],
+        },
+        cat_3: { name: "Ruházkodási cikkek", order: 3, color: [1.0, 0.4, 0.0] },
+        cat_4: {
+          name: "Tartós fogyasztási cikkek",
+          order: 4,
+          color: [1.0, 0.8, 0.0],
+        },
+        cat_5: { name: "Háztartási energia", order: 5, color: [0.0, 0.8, 1.0] },
+        cat_6: {
+          name: "Egyéb cikkek, üzemanyagok",
+          order: 6,
+          color: [0.0, 1.0, 0.0],
+        },
+        cat_7: { name: "Szolgáltatások", order: 7, color: [0.0, 0.3, 1.0] },
+      };
+
+      const MONTH_NAMES = [
+        "január",
+        "február",
+        "március",
+        "április",
+        "május",
+        "június",
+        "július",
+        "augusztus",
+        "szeptember",
+        "október",
+        "november",
+        "december",
+      ];
+
+      const formatDateLabel = (dateStr) => {
+        if (!dateStr) return "—";
+        const [year, month] = dateStr.split("-");
+        return `${year}. ${MONTH_NAMES[parseInt(month, 10) - 1]}`;
+      };
+
+      const formatShortDateLabel = (dateStr) => {
+        if (!dateStr) return "";
+        const [year, monthNum] = dateStr.split("-");
+        const shortMonths = [
+          "jan.",
+          "febr.",
+          "márc.",
+          "ápr.",
+          "máj.",
+          "jún.",
+          "júl.",
+          "aug.",
+          "szept.",
+          "okt.",
+          "nov.",
+          "dec.",
+        ];
+        return `${year}. ${shortMonths[parseInt(monthNum, 10) - 1]}`;
+      };
+
+      function formatHuNumber(value, fractionDigits) {
+        return new Intl.NumberFormat("hu-HU", {
+          minimumFractionDigits: fractionDigits,
+          maximumFractionDigits: fractionDigits,
+        }).format(value);
+      }
+
+      function formatPercent(value, fractionDigits = 1) {
+        return `${formatHuNumber(value, fractionDigits)}\u00a0%`;
+      }
+
+      function formatSignedPercent(value, fractionDigits = 1) {
+        const sign = value > 0 ? "+" : "";
+        return `${sign}${formatPercent(value, fractionDigits)}`;
+      }
+
+      function getCategoryPath(pkbase, index) {
+        const names = [];
+        let current = index;
+        const visited = new Set();
+        while (pkbase[current] && !visited.has(current)) {
+          visited.add(current);
+          names.unshift(pkbase[current][3]);
+          const parent = pkbase[current][2];
+          if (parent === undefined || parent === null || parent === "") break;
+          current = parent;
+        }
+        return names.join(" › ");
+      }
+
+      function getPointTooltipDetails(index, monthIndex) {
+        const { pkbase, pkdata } = window;
+        const base = pkbase[index];
+        const data = pkdata[index];
+        if (!base || !data || !data[0]) return null;
+
+        const weightIndex = Math.floor(monthIndex / 12);
+        const weightArr = base[5] || [0];
+        const weight =
+          weightArr[weightIndex] !== undefined
+            ? weightArr[weightIndex]
+            : weightArr[weightArr.length - 1];
+
+        const cpiIndex = data[0][monthIndex];
+        const inflationYoY = cpiIndex - 100;
+        let momInflation = null;
+        if (data[1] && data[1][monthIndex] != null) {
+          momInflation = data[1][monthIndex] - 100;
+        }
+
+        return {
+          name: base[3],
+          weight,
+          inflationYoY,
+          cpiIndex,
+          momInflation,
+          path: getCategoryPath(pkbase, index),
+          color: getCategoryColor(index),
+        };
+      }
+
+      function buildTooltipHtml(details) {
+        const momLine =
+          details.momInflation != null
+            ? `<div class="chart-tooltip-row"><span>Havi változás</span><b>${formatSignedPercent(details.momInflation)}</b></div>`
+            : `<div class="chart-tooltip-row chart-tooltip-muted"><span>Havi változás</span><span>—</span></div>`;
+
+        return `
+          <div class="chart-tooltip-title" style="color: ${details.color}">${details.name}</div>
+          <div class="chart-tooltip-rows">
+            <div class="chart-tooltip-row"><span>Súly</span><b>${formatPercent(details.weight, 3)}</b></div>
+            <div class="chart-tooltip-row"><span>Éves infláció</span><b>${formatSignedPercent(details.inflationYoY)}</b></div>
+            <div class="chart-tooltip-row"><span>Árindex</span><b>${formatHuNumber(details.cpiIndex, 1)}</b></div>
+            ${momLine}
+          </div>
+          <div class="chart-tooltip-path">${details.path}</div>
+        `;
+      }
+
+      function buildChildrenMap(pkbase) {
+        const map = {};
+        for (let i = 0; i < pkbase.length; i++) {
+          const row = pkbase[i];
+          if (!row) continue;
+          const parent = row[2];
+          if (parent === undefined || parent === null || parent === "") continue;
+          if (!map[parent]) map[parent] = [];
+          map[parent].push(i);
+        }
+        return map;
+      }
+
+      function getTopCategoryIndex(pkbase, index) {
+        let current = index;
+        while (pkbase[current] && pkbase[current][2] != null && pkbase[current][2] !== "") {
+          current = pkbase[current][2];
+        }
+        return current;
+      }
+
+      function getCategoryColor(index) {
+        const top = getTopCategoryIndex(window.pkbase, index);
+        const rgb = CUSTOM_CATEGORIES[`cat_${top}`]?.color || [0.4, 0.4, 0.4];
+        return `rgb(${rgb.map((c) => Math.round(c * 255)).join(",")})`;
+      }
+
+      function getCategoryStats(index, monthIndex) {
+        const { pkbase, pkdata } = window;
+        const base = pkbase[index];
+        const data = pkdata[index];
+        if (!base || !data || !data[0]) return null;
+
+        const weightIndex = Math.floor(monthIndex / 12);
+        const weightArr = base[5] || [0];
+        const weight =
+          weightArr[weightIndex] !== undefined
+            ? weightArr[weightIndex]
+            : weightArr[weightArr.length - 1];
+
+        return {
+          id: index,
+          name: base[3],
+          weight,
+          inflation: data[0][monthIndex] - 100,
+        };
+      }
+
+      function isUnderCategory(pkbase, index, categoryId) {
+        if (categoryId === null || categoryId === undefined) return true;
+        if (index === categoryId) return true;
+        let current = index;
+        const visited = new Set();
+        while (pkbase[current] && !visited.has(current)) {
+          visited.add(current);
+          if (current === categoryId) return true;
+          const parent = pkbase[current][2];
+          if (parent === undefined || parent === null || parent === "") return false;
+          current = parent;
+        }
+        return false;
+      }
+
+      function isVisibleForFilter(pkbase, index, chartFilterIds) {
+        if (index === -1) return false;
+        if (!chartFilterIds || chartFilterIds.length === 0) return true;
+        return chartFilterIds.some((categoryId) =>
+          isUnderCategory(pkbase, index, categoryId)
+        );
+      }
+
+      function hitTestChartPoint(mx, my, dataView, len, conf, canvasW, canvasH) {
+        let closestDist = Infinity;
+        let closestId = -1;
+
+        for (let i = 0; i < len; i++) {
+          const idx = i * 16;
+          if (dataView[idx + 11] < 0.1) continue;
+
+          const wx = dataView[idx + 0];
+          const wy = dataView[idx + 1];
+          const id = dataView[idx + 8];
+
+          const nx = (wx - conf.minX) / (conf.maxX - conf.minX);
+          const ny = (wy - conf.minY) / (conf.maxY - conf.minY);
+          const px = nx * canvasW;
+          const py = (1.0 - ny) * canvasH;
+
+          const dx = px - mx;
+          const dy = py - my;
+          const distSq = dx * dx + dy * dy;
+          if (distSq < 256 && distSq < closestDist) {
+            closestDist = distSq;
+            closestId = id;
+          }
+        }
+
+        return closestId;
+      }
+
+      function findPointScreenPosition(
+        pointId,
+        dataView,
+        len,
+        conf,
+        canvasW,
+        canvasH
+      ) {
+        for (let i = 0; i < len; i++) {
+          const idx = i * 16;
+          if (dataView[idx + 8] === pointId && dataView[idx + 11] > 0.1) {
+            const wx = dataView[idx + 0];
+            const wy = dataView[idx + 1];
+            const nx = (wx - conf.minX) / (conf.maxX - conf.minX);
+            const ny = (wy - conf.minY) / (conf.maxY - conf.minY);
+            return {
+              x: nx * canvasW,
+              y: (1.0 - ny) * canvasH,
+            };
+          }
+        }
+        return null;
+      }
+
+      function updateChartTooltip(
+        tooltipEl,
+        pointId,
+        dataView,
+        len,
+        conf,
+        canvasW,
+        canvasH,
+        monthIndex
+      ) {
+        if (!tooltipEl) return false;
+
+        const pos = findPointScreenPosition(
+          pointId,
+          dataView,
+          len,
+          conf,
+          canvasW,
+          canvasH
+        );
+        if (!pos) {
+          tooltipEl.style.display = "none";
+          return false;
+        }
+
+        tooltipEl.style.display = "block";
+        tooltipEl.style.left = `${pos.x}px`;
+        tooltipEl.style.top = `${pos.y}px`;
+
+        const details = getPointTooltipDetails(pointId, monthIndex);
+        const inner = tooltipEl.querySelector(".chart-tooltip-inner");
+        if (inner && details) {
+          inner.innerHTML = buildTooltipHtml(details);
+        }
+        return true;
+      }
+
+      function hideChartTooltip(tooltipEl) {
+        if (tooltipEl) tooltipEl.style.display = "none";
+      }
+
+      function FilterIcon({ active }) {
+        return (
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill={active ? "currentColor" : "none"}
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+          </svg>
+        );
+      }
+
+      function CategoryNode({
+        index,
+        monthIndex,
+        childrenByParent,
+        accordionName,
+        nested,
+        selectedId,
+        chartFilterIds,
+        onSelect,
+        onToggleFilter,
+      }) {
+        const children = childrenByParent[index] || [];
+        const stats = getCategoryStats(index, monthIndex);
+        if (!stats) return null;
+
+        const color = getCategoryColor(index);
+        const isLeaf = children.length === 0;
+        const isActive = selectedId === index;
+        const isFiltered = chartFilterIds.includes(index);
+
+        const rowControls = (
+          <div className="category-row-meta">
+            <button
+              type="button"
+              className={`category-filter-btn${isFiltered ? " is-active" : ""}`}
+              title={
+                isFiltered
+                  ? "Eltávolítás a diagram szűrőjéből"
+                  : chartFilterIds.length === 0
+                    ? "Csak ez a kategória a diagramon"
+                    : "Hozzáadás a diagram szűrőjéhez"
+              }
+              aria-label={
+                isFiltered
+                  ? "Eltávolítás a diagram szűrőjéből"
+                  : chartFilterIds.length === 0
+                    ? "Csak ez a kategória a diagramon"
+                    : "Hozzáadás a diagram szűrőjéhez"
+              }
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onToggleFilter(index);
+              }}
+            >
+              <FilterIcon active={isFiltered} />
+            </button>
+            <span className="category-inflation">
+              {formatPercent(stats.inflation)}
+            </span>
+          </div>
+        );
+
+        const labelBlock = (
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="category-dot" style={{ background: color }}></span>
+            <span className="category-name">{stats.name}</span>
+          </div>
+        );
+
+        if (isLeaf) {
+          return (
+            <div
+              className={`category-leaf${isActive ? " is-active" : ""}`}
+              data-category-row={index}
+              onClick={() => onSelect(index)}
+            >
+              <div className="flex items-center gap-2 min-w-0 flex-1">
+                {labelBlock}
+              </div>
+              {rowControls}
+            </div>
+          );
+        }
+
+        return (
+          <details
+            className={`category-details${nested ? " nested" : ""}${
+              isFiltered ? " is-filtered" : ""
+            }`}
+            data-category-id={index}
+            name={accordionName}
+          >
+            <summary
+              className={`category-summary${isActive ? " is-active" : ""}`}
+              data-category-row={index}
+            >
+              <div className="flex items-center gap-2 min-w-0 flex-1">
+                {labelBlock}
+              </div>
+              {rowControls}
+            </summary>
+            <div className="subcategory-list">
+              {children.map((childIndex) => (
+                <CategoryNode
+                  key={childIndex}
+                  index={childIndex}
+                  monthIndex={monthIndex}
+                  childrenByParent={childrenByParent}
+                  accordionName={`subcat-${index}`}
+                  nested
+                  selectedId={selectedId}
+                  chartFilterIds={chartFilterIds}
+                  onSelect={onSelect}
+                  onToggleFilter={onToggleFilter}
+                />
+              ))}
+            </div>
+          </details>
+        );
+      }
+
+      // 3. JAVASCRIPT FALLBACK FOR WASM
+      class WasmFallback {
+        constructor() {
+          this.memoryBuffer = new Float32Array(500 * 16);
+          this.len = 0;
+        }
+        reset_points() {
+          this.len = 0;
+        }
+        add_point(id, r, g, b) {
+          const i = this.len * 16;
+          this.memoryBuffer[i + 8] = id;
+          this.memoryBuffer[i + 4] = r;
+          this.memoryBuffer[i + 5] = g;
+          this.memoryBuffer[i + 6] = b;
+          this.len++;
+        }
+        update_target(id, tx, ty, weight, inflation, visible) {
+          for (let p = 0; p < this.len; p++) {
+            const i = p * 16;
+            if (this.memoryBuffer[i + 8] === id) {
+              this.memoryBuffer[i + 2] = tx;
+              this.memoryBuffer[i + 3] = ty;
+              this.memoryBuffer[i + 9] = weight;
+              this.memoryBuffer[i + 10] = inflation;
+              this.memoryBuffer[i + 12] = visible;
+              if (this.memoryBuffer[i + 11] < 0.01 && visible > 0) {
+                this.memoryBuffer[i + 0] = tx;
+                this.memoryBuffer[i + 1] = ty;
+              }
+              break;
+            }
+          }
+        }
+        animate(dt) {
+          const speed = 6.0 * dt;
+          for (let p = 0; p < this.len; p++) {
+            const i = p * 16;
+            this.memoryBuffer[i + 0] +=
+              (this.memoryBuffer[i + 2] - this.memoryBuffer[i + 0]) * speed;
+            this.memoryBuffer[i + 1] +=
+              (this.memoryBuffer[i + 3] - this.memoryBuffer[i + 1]) * speed;
+            this.memoryBuffer[i + 11] +=
+              (this.memoryBuffer[i + 12] - this.memoryBuffer[i + 11]) * speed;
+          }
+        }
+        get_points_ptr() {
+          return 0;
+        }
+        get_points_len() {
+          return this.len;
+        }
+      }
+
+      // 4. MAIN APP COMPONENT
+      const App = () => {
+        const canvasRef = useRef(null);
+        const gridCanvasRef = useRef(null); // Reference for the dynamic 2D background grid
+        const sliderRef = useRef(null);
+        const selectedTooltipRef = useRef(null);
+        const hoverTooltipRef = useRef(null);
+        const sidebarRef = useRef(null);
+
+        const [monthIndex, setMonthIndex] = useState(0);
+        const [dates, setDates] = useState([]);
+        const [isPlaying, setIsPlaying] = useState(false);
+        const [selectedId, setSelectedId] = useState(-1);
+        const [chartFilterIds, setChartFilterIds] = useState([]);
+
+        const childrenByParent = useMemo(
+          () => buildChildrenMap(window.pkbase || []),
+          []
+        );
+
+        const engineRef = useRef(null);
+        const glRef = useRef(null);
+        const resizeObserverRef = useRef(null);
+
+        // These bounds animate smoothly towards target bounds
+        const dataConfigRef = useRef({
+          minX: -2.2,
+          maxX: 2.0,
+          minY: -10,
+          maxY: 60,
+        });
+        const targetBoundsRef = useRef({
+          minX: -2.2,
+          maxX: 2.0,
+          minY: -10,
+          maxY: 60,
+        });
+
+        const selectedIdRef = useRef(-1);
+        const chartFilterIdsRef = useRef([]);
+        const monthIndexRef = useRef(0);
+        const hoveredIdRef = useRef(-1);
+        const mouseRef = useRef({ x: -1, y: -1, active: false });
+        const pointerRef = useRef({ x: -1, y: -1, onChart: false });
+
+        useEffect(() => {
+          selectedIdRef.current = selectedId;
+        }, [selectedId]);
+
+        useEffect(() => {
+          chartFilterIdsRef.current = chartFilterIds;
+        }, [chartFilterIds]);
+
+        useEffect(() => {
+          monthIndexRef.current = monthIndex;
+        }, [monthIndex]);
+
+        useEffect(() => {
+          setSelectedId((current) => {
+            if (current === -1) return -1;
+            const { pkbase } = window;
+            if (!isVisibleForFilter(pkbase, current, chartFilterIds)) {
+              return -1;
+            }
+            return current;
+          });
+        }, [chartFilterIds]);
+
+        const revealInSidebar = (categoryIndex) => {
+          const { pkbase } = window;
+          if (!sidebarRef.current || !pkbase[categoryIndex]) return;
+
+          const path = [];
+          let current = categoryIndex;
+          while (pkbase[current]) {
+            path.unshift(current);
+            const parent = pkbase[current][2];
+            if (parent === undefined || parent === null || parent === "") break;
+            current = parent;
+          }
+
+          for (const id of path) {
+            const details = sidebarRef.current.querySelector(
+              `details[data-category-id="${id}"]`
+            );
+            if (details) details.open = true;
+          }
+
+          requestAnimationFrame(() => {
+            const row = sidebarRef.current.querySelector(
+              `[data-category-row="${categoryIndex}"]`
+            );
+            row?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+          });
+        };
+
+        useEffect(() => {
+          if (selectedId !== -1) revealInSidebar(selectedId);
+        }, [selectedId]);
+
+        const handleSelectCategory = (index) => {
+          setSelectedId(index);
+        };
+
+        const handleToggleFilter = (index) => {
+          setChartFilterIds((prev) => {
+            if (prev.includes(index)) {
+              return prev.filter((id) => id !== index);
+            }
+            return [...prev, index];
+          });
+        };
+
+        useEffect(() => {
+          const init = async () => {
+            const canvas = canvasRef.current;
+            const gl = canvas.getContext("webgl");
+            if (!gl) return console.error("WebGL nem támogatott");
+
+            const compileShader = (type, source) => {
+              const shader = gl.createShader(type);
+              gl.shaderSource(shader, source);
+              gl.compileShader(shader);
+              if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+                console.error(gl.getShaderInfoLog(shader));
+              }
+              return shader;
+            };
+
+            const program = gl.createProgram();
+            gl.attachShader(program, compileShader(gl.VERTEX_SHADER, vsSource));
+            gl.attachShader(
+              program,
+              compileShader(gl.FRAGMENT_SHADER, fsSource)
+            );
+            gl.linkProgram(program);
+            gl.useProgram(program);
+
+            const locs = {
+              pos: gl.getAttribLocation(program, "a_position"),
+              color: gl.getAttribLocation(program, "a_color"),
+              visible: gl.getAttribLocation(program, "a_visible"),
+              id: gl.getAttribLocation(program, "a_id"),
+              minMaxX: gl.getUniformLocation(program, "u_min_max_x"),
+              minMaxY: gl.getUniformLocation(program, "u_min_max_y"),
+              selectedId: gl.getUniformLocation(program, "u_selected_id"),
+              dpr: gl.getUniformLocation(program, "u_dpr"),
+            };
+
+            const buffer = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+            gl.enableVertexAttribArray(locs.pos);
+            gl.enableVertexAttribArray(locs.color);
+            gl.enableVertexAttribArray(locs.visible);
+            gl.enableVertexAttribArray(locs.id);
+
+            gl.vertexAttribPointer(locs.pos, 2, gl.FLOAT, false, 64, 0);
+            gl.vertexAttribPointer(locs.color, 3, gl.FLOAT, false, 64, 16);
+            gl.vertexAttribPointer(locs.id, 1, gl.FLOAT, false, 64, 32);
+            gl.vertexAttribPointer(locs.visible, 1, gl.FLOAT, false, 64, 44);
+
+            glRef.current = { gl, program, locs, buffer };
+            gl.enable(gl.BLEND);
+            gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+
+            const syncCanvasSize = () => {
+              const container = canvas.parentElement;
+              if (!container || !gridCanvasRef.current) return;
+              const rect = container.getBoundingClientRect();
+              const dpr = window.devicePixelRatio || 1;
+              const w = Math.max(1, Math.round(rect.width * dpr));
+              const h = Math.max(1, Math.round(rect.height * dpr));
+
+              canvas.width = w;
+              canvas.height = h;
+              gridCanvasRef.current.width = w;
+              gridCanvasRef.current.height = h;
+            };
+
+            syncCanvasSize();
+            resizeObserverRef.current = new ResizeObserver(syncCanvasSize);
+            resizeObserverRef.current.observe(canvas.parentElement);
+
+            let engine;
+            try {
+              const response = await fetch("inflation_chart.wasm");
+              if (!response.ok) throw new Error("Wasm not found");
+              const { instance } = await WebAssembly.instantiateStreaming(
+                response
+              );
+              engine = {
+                ...instance.exports,
+                memoryBuffer: new Float32Array(instance.exports.memory.buffer),
+              };
+            } catch (e) {
+              console.log(
+                "JavaScript Fallback engine-t használunk a Wasm helyett"
+              );
+              engine = new WasmFallback();
+            }
+            engineRef.current = engine;
+
+            engine.reset_points();
+            const { pkbase, pkdata } = window;
+
+            for (let i = 0; i < pkbase.length; i++) {
+              if (pkbase[i] && pkbase[i][0] === undefined && pkbase[i][3]) {
+                const parentIdx = pkbase[i][2];
+                const grandParentIdx = pkbase[parentIdx]
+                  ? pkbase[parentIdx][2]
+                  : null;
+                if (
+                  grandParentIdx &&
+                  grandParentIdx >= 1 &&
+                  grandParentIdx <= 7
+                ) {
+                  const rgb = CUSTOM_CATEGORIES[`cat_${grandParentIdx}`].color;
+                  engine.add_point(i, rgb[0], rgb[1], rgb[2]);
+                }
+              }
+            }
+
+            const numMonths = pkdata[0][0].length;
+            const tempDates = [];
+            for (let m = 0; m < numMonths; m++) {
+              const year = 2022 + Math.floor(m / 12);
+              const month = (m % 12) + 1;
+              tempDates.push(`${year}-${String(month).padStart(2, "0")}`);
+            }
+            setDates(tempDates);
+
+            let lastTime = performance.now();
+            const render = (time) => {
+              const dt = Math.min((time - lastTime) / 1000, 0.1);
+              lastTime = time;
+
+              const e = engineRef.current;
+              const g = glRef.current;
+              const conf = dataConfigRef.current;
+              const target = targetBoundsRef.current;
+
+              // 1. Run point Physics
+              e.animate(dt);
+
+              // 2. Animate Dynamic Grid Bounds
+              const speed = 6.0 * dt;
+              conf.minX += (target.minX - conf.minX) * speed;
+              conf.maxX += (target.maxX - conf.maxX) * speed;
+              conf.minY += (target.minY - conf.minY) * speed;
+              conf.maxY += (target.maxY - conf.maxY) * speed;
+
+              // 3. Draw Dynamic Grid using 2D Canvas (underneath WebGL)
+              const gridCanvas = gridCanvasRef.current;
+              if (gridCanvas) {
+                const ctx = gridCanvas.getContext("2d");
+                const dpr = window.devicePixelRatio || 1;
+                const w = gridCanvas.width;
+                const h = gridCanvas.height;
+
+                ctx.clearRect(0, 0, w, h);
+
+                ctx.font = `${12 * dpr}px Inter, sans-serif`;
+                ctx.fillStyle = "#64748b";
+
+                // Draw Y Axis Lines
+                const yRange = conf.maxY - conf.minY;
+                let yStep = 10;
+                if (yRange > 80) yStep = 20;
+                else if (yRange < 30) yStep = 5;
+
+                const firstY = Math.ceil(conf.minY / yStep) * yStep;
+                const lastY = Math.floor(conf.maxY / yStep) * yStep;
+
+                for (let y = firstY; y <= lastY; y += yStep) {
+                  const ny = (y - conf.minY) / (conf.maxY - conf.minY);
+                  const py = (1.0 - ny) * h;
+
+                  ctx.beginPath();
+                  ctx.moveTo(0, py);
+                  ctx.lineTo(w, py);
+                  ctx.strokeStyle = y === 0 ? "#94a3b8" : "#f1f5f9";
+                  ctx.lineWidth = (y === 0 ? 2 : 1) * dpr;
+                  ctx.stroke();
+
+                  ctx.fillText(y + "%", 10 * dpr, py - 6 * dpr);
+                }
+
+                // Draw X Axis Lines (Logarithmic grid)
+                const xValues = [0.01, 0.1, 1, 10, 100];
+                for (const val of xValues) {
+                  const logV = Math.log10(val);
+                  if (logV >= conf.minX && logV <= conf.maxX) {
+                    const nx = (logV - conf.minX) / (conf.maxX - conf.minX);
+                    const px = nx * w;
+
+                    ctx.beginPath();
+                    ctx.moveTo(px, 0);
+                    ctx.lineTo(px, h);
+                    ctx.strokeStyle = "#f1f5f9";
+                    ctx.lineWidth = 1 * dpr;
+                    ctx.stroke();
+
+                    ctx.fillText(val + "%", px + 6 * dpr, h - 10 * dpr);
+                  }
+                }
+              }
+
+              // 4. Draw WebGL points
+              const ptr = e.get_points_ptr();
+              const len = e.get_points_len();
+              const dataView = e.memoryBuffer.buffer
+                ? new Float32Array(e.memoryBuffer.buffer, ptr, len * 16)
+                : e.memoryBuffer;
+
+              const { gl } = g;
+              const dpr = window.devicePixelRatio || 1;
+              gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+              gl.clearColor(0, 0, 0, 0);
+              gl.clear(gl.COLOR_BUFFER_BIT);
+
+              gl.bindBuffer(gl.ARRAY_BUFFER, g.buffer);
+              gl.bufferData(gl.ARRAY_BUFFER, dataView, gl.DYNAMIC_DRAW);
+
+              gl.uniform2f(g.locs.minMaxX, conf.minX, conf.maxX);
+              gl.uniform2f(g.locs.minMaxY, conf.minY, conf.maxY);
+              gl.uniform1f(g.locs.selectedId, selectedIdRef.current);
+              gl.uniform1f(g.locs.dpr, dpr);
+
+              gl.drawArrays(gl.POINTS, 0, len);
+
+              const canvasW = gl.canvas.clientWidth;
+              const canvasH = gl.canvas.clientHeight;
+
+              // 5. Raycasting for click interaction
+              if (mouseRef.current.active) {
+                const closestId = hitTestChartPoint(
+                  mouseRef.current.x,
+                  mouseRef.current.y,
+                  dataView,
+                  len,
+                  conf,
+                  canvasW,
+                  canvasH
+                );
+
+                if (closestId !== -1) {
+                  setSelectedId(closestId);
+                } else {
+                  setSelectedId(-1);
+                }
+                mouseRef.current.active = false;
+              }
+
+              // 5b. Hover hit-test (tooltip preview)
+              if (pointerRef.current.onChart) {
+                hoveredIdRef.current = hitTestChartPoint(
+                  pointerRef.current.x,
+                  pointerRef.current.y,
+                  dataView,
+                  len,
+                  conf,
+                  canvasW,
+                  canvasH
+                );
+              } else {
+                hoveredIdRef.current = -1;
+              }
+
+              // 6. DOM Tooltips (selected + hover)
+              const { pkbase } = window;
+              const hoveredId = hoveredIdRef.current;
+              const selectedId = selectedIdRef.current;
+              const filterIds = chartFilterIdsRef.current;
+              const monthIdx = monthIndexRef.current;
+
+              if (
+                selectedId !== -1 &&
+                isVisibleForFilter(pkbase, selectedId, filterIds)
+              ) {
+                const shown = updateChartTooltip(
+                  selectedTooltipRef.current,
+                  selectedId,
+                  dataView,
+                  len,
+                  conf,
+                  canvasW,
+                  canvasH,
+                  monthIdx
+                );
+                if (!shown) hideChartTooltip(selectedTooltipRef.current);
+              } else {
+                hideChartTooltip(selectedTooltipRef.current);
+              }
+
+              if (
+                hoveredId !== -1 &&
+                hoveredId !== selectedId &&
+                isVisibleForFilter(pkbase, hoveredId, filterIds)
+              ) {
+                const shown = updateChartTooltip(
+                  hoverTooltipRef.current,
+                  hoveredId,
+                  dataView,
+                  len,
+                  conf,
+                  canvasW,
+                  canvasH,
+                  monthIdx
+                );
+                if (!shown) hideChartTooltip(hoverTooltipRef.current);
+              } else {
+                hideChartTooltip(hoverTooltipRef.current);
+              }
+
+              requestAnimationFrame(render);
+            };
+            requestAnimationFrame(render);
+          };
+          init();
+
+          return () => resizeObserverRef.current?.disconnect();
+        }, []);
+
+        useEffect(() => {
+          if (!engineRef.current || dates.length === 0) return;
+          const engine = engineRef.current;
+          const { pkbase, pkdata } = window;
+          const m = monthIndex;
+          const weightIndex = Math.floor(m / 12);
+
+          let cMinY = Infinity,
+            cMaxY = -Infinity;
+          let cMinX = Infinity,
+            cMaxX = -Infinity;
+
+          // Process bounds and update points
+          for (let p = 0; p < pkbase.length; p++) {
+            if (pkbase[p] && pkbase[p][0] === undefined && pkdata[p]) {
+              const weightArr = pkbase[p][5] || [0];
+              const weight =
+                weightArr[weightIndex] !== undefined
+                  ? weightArr[weightIndex]
+                  : weightArr[weightArr.length - 1];
+
+              let visible = 0.0;
+              if (weight > 0) {
+                const inflation = pkdata[p][0][m] - 100;
+                const tx = Math.log10(weight);
+                const ty = inflation;
+
+                const passesFilter = isVisibleForFilter(
+                  pkbase,
+                  p,
+                  chartFilterIds
+                );
+
+                if (passesFilter) {
+                  visible = 1.0;
+                }
+
+                engine.update_target(p, tx, ty, weight, inflation, visible);
+
+                if (visible > 0.5) {
+                  if (inflation < cMinY) cMinY = inflation;
+                  if (inflation > cMaxY) cMaxY = inflation;
+                  if (tx < cMinX) cMinX = tx;
+                  if (tx > cMaxX) cMaxX = tx;
+                }
+              } else {
+                engine.update_target(p, -100, 0, 0, 0, 0.0);
+              }
+            }
+          }
+
+          // Update dynamic Target Bounds with padding so points don't clip the edge
+          if (cMinY !== Infinity) {
+            if (cMaxY - cMinY < 10) {
+              cMaxY += 5;
+              cMinY -= 5;
+            } // Enforce min spread
+            const padY = (cMaxY - cMinY) * 0.15;
+            const padX = (cMaxX - cMinX) * 0.05;
+
+            targetBoundsRef.current = {
+              minX: Math.min(-2.2, cMinX - padX), // Bound X to keep it stable-ish
+              maxX: Math.max(2.0, cMaxX + padX),
+              minY: cMinY - padY, // Fully dynamic Y
+              maxY: cMaxY + padY,
+            };
+          }
+
+        }, [monthIndex, dates, chartFilterIds]);
+
+        // Auto Playback logic
+        useEffect(() => {
+          let interval;
+          if (isPlaying && dates.length > 0) {
+            interval = setInterval(() => {
+              setMonthIndex((prev) => {
+                if (prev >= dates.length - 1) {
+                  setIsPlaying(false);
+                  return prev;
+                }
+                return prev + 1;
+              });
+            }, 800); // 800ms per step
+          }
+          return () => clearInterval(interval);
+        }, [isPlaying, dates.length]);
+
+        useEffect(() => {
+          if (!sliderRef.current || dates.length === 0) return;
+          const container = sliderRef.current;
+          if (!container.noUiSlider) {
+            noUiSlider.create(container, {
+              start: [0],
+              step: 1,
+              connect: [true, false],
+              range: { min: 0, max: dates.length - 1 },
+              format: { to: (v) => Math.round(v), from: (v) => Math.round(v) },
+            });
+
+            container.noUiSlider.on("slide", (v, h) => {
+              setIsPlaying(false); // Stop playing when manually sliding
+              setMonthIndex(parseInt(v[h], 10));
+            });
+
+            container.noUiSlider.on("start", () => {
+              setIsPlaying(false); // Stop playing on touch/click
+            });
+
+            const updatePips = () => {
+              const width = container.offsetWidth;
+              const step = width <= 850 ? 12 : width <= 1250 ? 8 : 4;
+              const values = dates
+                .map((_, i) => i)
+                .filter((i) => i % step === 0 || i === dates.length - 1);
+              container.noUiSlider.updateOptions({
+                pips: {
+                  mode: "values",
+                  values,
+                  density: 100,
+                  format: {
+                    to: (v) => formatShortDateLabel(dates[Math.round(v)]),
+                  },
+                },
+              });
+            };
+            updatePips();
+            new ResizeObserver(updatePips).observe(container);
+          }
+        }, [dates]);
+
+        useEffect(() => {
+          if (sliderRef.current?.noUiSlider)
+            sliderRef.current.noUiSlider.set(monthIndex);
+        }, [monthIndex]);
+
+        const handleCanvasClick = (e) => {
+          const rect = canvasRef.current.getBoundingClientRect();
+          mouseRef.current = {
+            x: e.clientX - rect.left,
+            y: e.clientY - rect.top,
+            active: true,
+          };
+        };
+
+        const handleCanvasMouseMove = (e) => {
+          const rect = canvasRef.current.getBoundingClientRect();
+          pointerRef.current = {
+            x: e.clientX - rect.left,
+            y: e.clientY - rect.top,
+            onChart: true,
+          };
+        };
+
+        const handleCanvasMouseLeave = () => {
+          pointerRef.current.onChart = false;
+          hoveredIdRef.current = -1;
+        };
+
+        const handlePrev = () => {
+          setIsPlaying(false);
+          setMonthIndex((prev) => Math.max(0, prev - 1));
+        };
+
+        const handleNext = () => {
+          setIsPlaying(false);
+          setMonthIndex((prev) => Math.min(dates.length - 1, prev + 1));
+        };
+
+        const togglePlay = () => {
+          if (monthIndex >= dates.length - 1) {
+            setMonthIndex(0);
+            setIsPlaying(true);
+          } else {
+            setIsPlaying(!isPlaying);
+          }
+        };
+
+        return (
+          <div className="app-shell bg-slate-50 text-slate-800">
+            <header className="app-header bg-white border-b p-6 flex justify-between items-center z-10 shadow-sm shrink-0">
+              <div>
+                <h1 className="text-2xl font-bold tracking-tight">
+                  Magyar infláció – WebGL animáció
+                </h1>
+                <p className="text-sm text-slate-500">
+                  60 FPS fizikai szimuláció Wasm + WebGL alapon
+                </p>
+              </div>
+            </header>
+
+            <main className="app-main">
+              <aside
+                ref={sidebarRef}
+                className="sidebar-panel bg-white border-r p-6 shrink-0 z-10 shadow-[4px_0_12px_rgba(0,0,0,0.02)]"
+              >
+                <p className="sidebar-date">
+                  {dates[monthIndex]
+                    ? formatDateLabel(dates[monthIndex])
+                    : "Betöltés..."}
+                </p>
+                {chartFilterIds.length > 0 && (
+                  <div className="filter-banner">
+                    <span className="truncate">
+                      Szűrők:{" "}
+                      <b>
+                        {chartFilterIds
+                          .map((id) => window.pkbase[id]?.[3])
+                          .filter(Boolean)
+                          .join(", ")}
+                      </b>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setChartFilterIds([])}
+                    >
+                      Törlés
+                    </button>
+                  </div>
+                )}
+                <div className="category-accordion">
+                  {[1, 2, 3, 4, 5, 6, 7].map((categoryId) => (
+                    <CategoryNode
+                      key={categoryId}
+                      index={categoryId}
+                      monthIndex={monthIndex}
+                      childrenByParent={childrenByParent}
+                      accordionName="inflation-categories"
+                      selectedId={selectedId}
+                      chartFilterIds={chartFilterIds}
+                      onSelect={handleSelectCategory}
+                      onToggleFilter={handleToggleFilter}
+                    />
+                  ))}
+                </div>
+              </aside>
+
+              <section className="chart-section chart-stack">
+                <canvas
+                  ref={gridCanvasRef}
+                  className="grid-layer"
+                  aria-hidden="true"
+                ></canvas>
+
+                <canvas
+                  ref={canvasRef}
+                  onClick={handleCanvasClick}
+                  onMouseMove={handleCanvasMouseMove}
+                  onMouseLeave={handleCanvasMouseLeave}
+                  className="webgl-layer"
+                ></canvas>
+
+                <div
+                  ref={selectedTooltipRef}
+                  className="chart-tooltip chart-tooltip-selected"
+                >
+                  <div className="chart-tooltip-inner"></div>
+                  <div className="chart-tooltip-arrow" aria-hidden="true"></div>
+                </div>
+
+                <div
+                  ref={hoverTooltipRef}
+                  className="chart-tooltip chart-tooltip-hover"
+                >
+                  <div className="chart-tooltip-inner"></div>
+                  <div className="chart-tooltip-arrow" aria-hidden="true"></div>
+                </div>
+              </section>
+            </main>
+
+            <footer className="bottom-control-bar">
+              <div className="controls-inner-layout">
+                <div className="slider-wrapper">
+                  <button
+                    type="button"
+                    className="step-button"
+                    onClick={handlePrev}
+                    title="Előző hónap"
+                    aria-label="Előző hónap"
+                  >
+                    <svg
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                      width="16"
+                      height="16"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M15 19l-7-7 7-7"></path>
+                    </svg>
+                  </button>
+
+                  <div className="slider-core">
+                    <div ref={sliderRef}></div>
+                  </div>
+
+                  <button
+                    type="button"
+                    className="step-button"
+                    onClick={handleNext}
+                    title="Következő hónap"
+                    aria-label="Következő hónap"
+                  >
+                    <svg
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                      width="16"
+                      height="16"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M9 5l7 7-7 7"></path>
+                    </svg>
+                  </button>
+                </div>
+
+                <div className="media-deck">
+                  <button
+                    type="button"
+                    className="play-button"
+                    onClick={togglePlay}
+                    title={isPlaying ? "Szünet" : "Lejátszás"}
+                    aria-label={isPlaying ? "Szünet" : "Lejátszás"}
+                  >
+                    {isPlaying ? (
+                      <svg
+                        className="icon-play"
+                        fill="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <rect x="6" y="4" width="4" height="16"></rect>
+                        <rect x="14" y="4" width="4" height="16"></rect>
+                      </svg>
+                    ) : (
+                      <svg
+                        className="icon-play"
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
+                        style={{ marginLeft: "3px" }}
+                      >
+                        <path d="M4 4l12 6-12 6z"></path>
+                      </svg>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </footer>
+          </div>
+        );
+      };
+
+      const root = createRoot(document.getElementById("root"));
+      root.render(<App />);
+    </script>
+  </body>
+</html>
